@@ -1,5 +1,6 @@
 """MNIST el yazısı rakam tanıma - CNN eğitimi."""
 import argparse
+import json
 from pathlib import Path
 
 import torch
@@ -68,6 +69,7 @@ def main():
     model = CNN().to(device)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
 
+    history = []
     for epoch in range(1, args.epochs + 1):
         model.train()
         total = 0.0
@@ -79,11 +81,14 @@ def main():
             opt.step()
             total += loss.item() * x.size(0)
         acc = evaluate(model, test_loader, device)
+        history.append({"epoch": epoch, "loss": total / len(train_ds), "test_acc": acc})
         print(f"Epoch {epoch}/{args.epochs}  loss={total / len(train_ds):.4f}  test_acc={acc:.4%}")
 
     out = ROOT / "models" / "mnist_cnn.pt"
+    out.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), out)
     print(f"Model kaydedildi: {out}")
+    (ROOT / "models" / "history.json").write_text(json.dumps(history, indent=2))
 
 
 if __name__ == "__main__":
