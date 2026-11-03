@@ -1,5 +1,7 @@
 El yazısı rakam tanıma canlı demo uygulaması. Bir rakam çizin; uygulama rakamın nasıl belirlendiğini (ters çevirme ve kırpma, 28×28'e getirme, CNN katmanları, softmax olasılıkları) adım adım gösterir ve tahmini verir. Python ve PyTorch paketin içinde gelir; ayrıca Python kurmanız ya da internete bağlanmanız gerekmez.
 
+Paketteki model: 5 epoch eğitilmiş CNN, MNIST test setinde %99,10 doğruluk.
+
 ## İndirme
 
 | Sistem | Dosya |

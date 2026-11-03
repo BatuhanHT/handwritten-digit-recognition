@@ -3,6 +3,7 @@ data/
 __pycache__/
 *.pyc
 models/*.pt
+!models/mnist_cnn.pt
 .DS_Store
 node_modules/
 /build/

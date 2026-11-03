@@ -23,6 +23,8 @@ EBLG463 Yapay Zeka ve Makine Öğrenimi dersi grup projesi (Dr. Savaş Ünsal). 
 | 4 | 0,0288 | %99,10 (en iyi) |
 | 5 | 0,0228 | %98,94 (kaydedilen model) |
 
+Tablo, sunumdaki eğitim koşusuna aittir. Repodaki `models/mnist_cnn.pt` aynı ayarlarla yapılmış başka bir koşudan gelir: 5. epoch'ta test doğruluğu %99,10. Seed sabit olmadığı için koşular arasında küçük farklar olur.
+
 ## Kurulum
 
 Python 3.10 veya üstü gerekir. macOS'taki sistem Python'u 3.9 ise önce `brew install python@3.12` ile yeni bir sürüm kurun; `setup.sh` uygun sürümü kendisi bulur.
