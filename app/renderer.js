@@ -13,8 +13,10 @@ const LINE_DELAY = 70;   // ms, sıradan satırlar arası
 const STEP_DELAY = 300;  // ms, [n/4] adım başlıklarından önce
 const RESULT_DELAY = 250;
 const TIMEOUT_MS = 10000; // Python bu sürede yanıt vermezse istek hata sayılır
+const CODE_DELAY = 28;    // ms, kod hücresindeki satırlar arası
+let code = null;          // { file, cells } — main.js, src/predict.py'deki "# [adım N]" işaretlerinden okur
 
-const state = { ready: false, busy: false, drawn: false, reqId: 0, buffer: [], drawing: false, last: null, timer: null };
+const state = { ready: false, busy: false, drawn: false, reqId: 0, buffer: [], drawing: false, last: null, timer: null, playId: 0 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // %100,0 gibi yanıltıcı yuvarlamalar yerine %99,9+ (predict.py'deki pct ile aynı kural)
 const pct = (p) => (p >= 0.9995 ? '%99,9+' : `%${(p * 100).toFixed(1).replace('.', ',')}`);
@@ -84,6 +86,75 @@ function addLine(text, kind) {
   }
   term.appendChild(div);
   term.scrollTop = term.scrollHeight;
+}
+
+/* ---------- Kod hücreleri ---------- */
+const PY_KEYWORDS = new Set(['def', 'return', 'if', 'elif', 'else', 'not', 'for', 'in', 'with', 'and', 'or', 'is', 'None', 'True', 'False', 'raise', 'lambda']);
+const PY_BUILTINS = new Set(['int', 'float', 'bool', 'max', 'min', 'round', 'len', 'range', 'str', 'ValueError']);
+const PY_MODULES = new Set(['np', 'torch', 'F', 'Image', 'model']);
+const TOKEN = /(#.*$)|([rbf]?"(?:[^"\\]|\\.)*"|[rbf]?'(?:[^'\\]|\\.)*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_]\w*)|([\s\S])/g;
+
+// Python satırını renklendirir; metin yalnızca textContent ile eklenir
+function highlight(text) {
+  const frag = document.createDocumentFragment();
+  TOKEN.lastIndex = 0;
+  let m;
+  while ((m = TOKEN.exec(text))) {
+    const [tok, com, str, num, word] = m;
+    let cls = '';
+    if (com) cls = 'tk-com';
+    else if (str) cls = 'tk-str';
+    else if (num) cls = 'tk-num';
+    else if (word && PY_KEYWORDS.has(word)) cls = 'tk-kw';
+    else if (word && PY_BUILTINS.has(word)) cls = 'tk-bi';
+    else if (word && PY_MODULES.has(word)) cls = 'tk-mod';
+    if (cls) frag.append(Object.assign(document.createElement('span'), { className: cls, textContent: tok }));
+    else frag.append(tok);
+  }
+  return frag;
+}
+
+function codeRow(no, text) {
+  const row = document.createElement('div');
+  row.className = 'code-ln';
+  const num = Object.assign(document.createElement('span'), { className: 'no', textContent: String(no) });
+  const tx = document.createElement('span');
+  tx.className = 'tx';
+  tx.append(highlight(text));
+  row.append(num, tx);
+  return row;
+}
+
+function setCellsOpen(open) {
+  term.querySelectorAll('.cell').forEach((c) => c.classList.toggle('open', open));
+}
+
+async function showCodeCell(n, playId) {
+  const cell = code && code.cells[n];
+  if (!cell) return;
+  setCellsOpen(false); // önceki adımın kodu kapanır, çıktısı görünür kalır
+  const box = document.createElement('div');
+  box.className = 'cell open';
+  const head = document.createElement('button');
+  head.type = 'button';
+  head.className = 'cell-head';
+  const ranges = cell.regions.map((r) => `${r.from - 1}–${r.to}`).join(', '); // gösterilen satırlar
+  head.append(Object.assign(document.createElement('span'), { className: 'caret', textContent: '▾' }), `${code.file} · satır ${ranges}`);
+  head.addEventListener('click', () => box.classList.toggle('open'));
+  const body = document.createElement('div');
+  body.className = 'cell-body';
+  box.append(head, body);
+  term.appendChild(box);
+  for (const [i, r] of cell.regions.entries()) {
+    if (i > 0) body.append(Object.assign(document.createElement('div'), { className: 'code-gap', textContent: '⋮' }));
+    body.append(codeRow(r.from - 1, `# [adım ${n}] ${i === 0 ? cell.title : ''}`.trimEnd()));
+    for (const l of r.lines) {
+      await sleep(CODE_DELAY);
+      if (playId !== state.playId) return;
+      body.append(codeRow(l.no, l.text));
+      term.scrollTop = term.scrollHeight;
+    }
+  }
 }
 
 function classify(text) {
@@ -179,8 +250,17 @@ function finishWithError(message, { fromPython = false } = {}) {
 }
 
 async function playback(lines, result, error, showErrorLine = false) {
+  // Yeni bir oynatma (ör. Python kapanınca gelen hata) eskisini durdurur; iki akış üst üste binmez
+  const id = ++state.playId;
   for (const { stream, text } of lines) {
-    await sleep(/^\[\d\/4\]/.test(text) ? STEP_DELAY : LINE_DELAY);
+    const step = text.match(/^\[(\d)\/4\]/);
+    if (step) {
+      await sleep(STEP_DELAY);
+      if (id !== state.playId) return;
+      await showCodeCell(step[1], id);
+    }
+    await sleep(step ? STEP_DELAY : LINE_DELAY);
+    if (id !== state.playId) return;
     addLine(text, stream === 'stderr' ? 'err' : undefined);
     if (result && text.startsWith('[2/4]')) setStage(2, result.images.crop);
     if (result && text.startsWith('[3/4]')) setStage(3, result.images.img28);
@@ -188,6 +268,8 @@ async function playback(lines, result, error, showErrorLine = false) {
   }
   if (result) {
     await sleep(RESULT_DELAY);
+    if (id !== state.playId) return;
+    setCellsOpen(false); // tahmin ekrana sığsın; kod K ya da başlığa tıklayarak yeniden açılır
     setResult('done', String(result.digit), `${pct(result.probs[result.digit])} güven`, result.probs);
   } else {
     if (showErrorLine) addLine(error || 'Hata', 'err');
@@ -242,11 +324,13 @@ window.demo.onLine(({ stream, text }) => {
   else addLine(text, stream === 'stderr' ? 'err' : stream === 'cmd' ? 'cmd' : undefined);
 });
 
-window.demo.onExit(({ code, signal }) => {
+window.demo.onCode((msg) => { code = msg; });
+
+window.demo.onExit(({ code: exitCode, signal }) => {
   state.ready = false;
   if (state.busy) finishWithError('Python süreci kapandı');
   // FATAL mesajı (ör. model dosyası yok) daha açıklayıcı; onu ezme
-  if ($('#status').dataset.state !== 'err') setStatus('err', `Python süreci kapandı (${signal || `kod ${code}`})`);
+  if ($('#status').dataset.state !== 'err') setStatus('err', `Python süreci kapandı (${signal || `kod ${exitCode}`})`);
   addLine('Python süreci kapandı. Yeniden başlatmak için Cmd+R.', 'err');
   setButtons();
 });
@@ -256,6 +340,10 @@ btnClear.addEventListener('click', clearAll);
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); predict(); }
   if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); clearAll(); }
+  if ((e.key === 'k' || e.key === 'K') && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    const cells = [...term.querySelectorAll('.cell')];
+    setCellsOpen(cells.some((c) => !c.classList.contains('open'))); // biri kapalıysa hepsini aç, değilse kapat
+  }
 });
 
 resetPad();

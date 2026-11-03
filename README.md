@@ -57,7 +57,7 @@ python src/predict.py --image rakam.png # Tek bir görüntüden tahmin, adımlar
 
 ## Canlı Demo (Electron)
 
-Çizdiğiniz rakamı eğitilmiş modelle tahmin eden masaüstü uygulaması. Arka planda `src/predict.py` çalışır ve çıktısı uygulamadaki terminal panelinde satır satır görünür. Rakam şu 4 adımda belirlenir:
+Çizdiğiniz rakamı eğitilmiş modelle tahmin eden masaüstü uygulaması. Arka planda `src/predict.py` çalışır. Terminal panelinde her adım için önce o adımı yapan **gerçek kod satırları** (dosyadaki satır numaralarıyla), hemen altında Python'un ürettiği çıktı görünür. Kod hücreleri, uygulama her açıldığında (ya da Cmd+R ile yenilendiğinde) `src/predict.py` içindeki `# [adım N]` … `# [/adım N]` işaretlerinden okunur; paketlenmiş sürümde paketin içindeki kopyadan okunur. Rakam şu 4 adımda belirlenir:
 
 1. **Çizim:** 280×280 tuval gri tonlamaya çevrilir.
 2. **Ters çevir + kırp:** MNIST'teki gibi siyah zemin ve beyaz rakam elde edilir, rakamın çevresindeki boşluk kırpılır.
@@ -72,7 +72,7 @@ npm install
 npm start
 ```
 
-Kısayollar: **Enter** tahmin eder, **Esc** tuvali temizler. Uygulama `.venv/bin/python`'u kullanır; yoksa `python3` denenir. Başka bir yorumlayıcı için `PYTHON=/yol/python npm start` yazın.
+Kısayollar: **Enter** tahmin eder, **Esc** tuvali temizler, **K** kod hücrelerini açar ya da kapatır (bir hücrenin başlığına tıklamak yalnızca onu açar). Uygulama `.venv/bin/python`'u kullanır; yoksa `python3` denenir. Başka bir yorumlayıcı için `PYTHON=/yol/python npm start` yazın.
 
 ### Hazır paketler (dmg / exe)
 
@@ -89,10 +89,11 @@ cd app && npm run dist                  # → app/dist/*.dmg ya da *.exe
 ## Testler
 
 ```bash
-python -m unittest discover -s tests -v
+python -m unittest discover -s tests -v   # Python: ön işleme, ileri geçiş, --serve protokolü
+cd app && npm test                        # Arayüz: predict.py'deki kod hücresi işaretleri
 ```
 
-Testler ön işlemeyi (ters çevirme, kırpma, 20 piksel ölçekleme, kütle merkezine göre ortalama) ve adım adım ileri geçişin `CNN.forward` ile aynı sonucu verdiğini doğrular. Model dosyası ya da MNIST indirmesi gerektirmez.
+Python testleri ön işlemeyi (ters çevirme, kırpma, 20 piksel ölçekleme, kütle merkezine göre ortalama) ve adım adım ileri geçişin `CNN.forward` ile aynı sonucu verdiğini doğrular. Model dosyası ya da MNIST indirmesi gerektirmez.
 
 ## Model
 

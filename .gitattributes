@@ -1,0 +1,4 @@
+# Windows CI (autocrlf) dosyaları CRLF ile çekmesin; demo kod hücreleri ve testler LF bekler
+*.py text eol=lf
+*.js text eol=lf
+*.sh text eol=lf

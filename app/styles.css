@@ -117,6 +117,30 @@ kbd {
 .ln.final { margin-top: 0.3em; color: #fff; font-weight: 700; }
 .ln.final b { color: var(--orange); }
 
+/* Kod hücreleri: her adımın çıktısından önce o adımı yapan gerçek satırlar */
+.term-hint { margin-left: auto; font-size: 12px; color: var(--muted); }
+.term-hint kbd { background: var(--term-bg); }
+.cell { margin: 0.4em 0 0.15em; border-radius: 8px; background: #0f1a2a; box-shadow: inset 0 0 0 1px #1f2f47; }
+.cell-head {
+  all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 2px 10px; font: inherit; font-size: 0.92em; color: var(--muted); cursor: pointer;
+}
+.cell-head:hover { color: var(--text); }
+.cell-head .caret { display: inline-block; width: 1ch; transition: transform 0.15s; }
+.cell:not(.open) .caret { transform: rotate(-90deg); }
+.cell-body { padding: 1px 10px 5px; overflow-x: auto; } /* küçük ekranda uzun satır kesilmesin, kaydırılsın */
+.cell:not(.open) .cell-body { display: none; }
+.code-ln { display: grid; grid-template-columns: 3.2ch 1fr; gap: 1.4ch; white-space: pre; animation: appear 0.15s ease-out; }
+.code-ln .no { color: #4f6380; text-align: right; }
+.code-ln .tx { color: #c8d3e0; }
+.code-gap { color: #4f6380; padding-left: 4.6ch; }
+.tk-kw { color: #e9a23b; }
+.tk-str { color: #9ad18b; }
+.tk-num { color: #f0b36b; }
+.tk-com { color: #6f86a3; font-style: italic; }
+.tk-bi { color: #7fb8ff; }
+.tk-mod { color: #4fc3b3; }
+
 .bottom { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; min-width: 0; }
 .stages {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; min-width: 0;

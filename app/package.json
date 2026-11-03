@@ -7,7 +7,8 @@
   "scripts": {
     "start": "electron .",
     "postinstall": "node node_modules/electron/install.js",
-    "dist": "electron-builder --publish never"
+    "dist": "electron-builder --publish never",
+    "test": "node --test"
   },
   "devDependencies": {
     "electron": "44.9.3",
@@ -30,7 +31,8 @@
       "renderer.js",
       "index.html",
       "styles.css",
-      "package.json"
+      "package.json",
+      "code-cells.js"
     ],
     "extraResources": [
       {
@@ -40,6 +42,10 @@
       {
         "from": "../models/mnist_cnn.pt",
         "to": "models/mnist_cnn.pt"
+      },
+      {
+        "from": "../src/predict.py",
+        "to": "src/predict.py"
       }
     ],
     "mac": {

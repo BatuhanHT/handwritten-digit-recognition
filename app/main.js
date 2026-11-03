@@ -5,6 +5,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const readline = require('node:readline');
 const { spawn } = require('node:child_process');
+const { parseCodeCells } = require('./code-cells');
 
 const ROOT = path.resolve(__dirname, '..');
 let win = null;
@@ -30,6 +31,16 @@ function backendCommand() {
 
 function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+}
+
+// Terminalde her adımın çıktısından önce gösterilecek gerçek kod satırları (src/predict.py'deki işaretlerden)
+function sendCodeCells() {
+  const file = app.isPackaged ? path.join(process.resourcesPath, 'src', 'predict.py') : path.join(ROOT, 'src', 'predict.py');
+  try {
+    send('code-cells', { file: 'src/predict.py', cells: parseCodeCells(fs.readFileSync(file, 'utf8')) });
+  } catch (err) {
+    send('py-line', { stream: 'stderr', text: `Kod hücreleri okunamadı: ${err.message}` });
+  }
 }
 
 // Her sayfa yüklemesinde (ilk açılış ya da Cmd+R) Python baştan başlatılır;
@@ -82,7 +93,10 @@ function createWindow() {
       sandbox: true,
     },
   });
-  win.webContents.on('did-finish-load', startPython);
+  win.webContents.on('did-finish-load', () => {
+    sendCodeCells();
+    startPython();
+  });
   win.webContents.on('will-navigate', (event) => event.preventDefault()); // ör. pencereye dosya sürüklenirse
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.loadFile(path.join(__dirname, 'index.html'));

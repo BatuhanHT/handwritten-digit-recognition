@@ -50,12 +50,14 @@ def signed(n):
 
 def to_gray(img):
     """Saydam alanları beyaz kabul ederek 0–255 gri tonlamalı float dizi döndürür."""
+    # [adım 1] Çizim: tuval görüntüsü gri tonlu sayı dizisine çevrilir
     if img.mode in ("RGBA", "LA", "P"):
         img = img.convert("RGBA")
         bg = Image.new("RGBA", img.size, (255, 255, 255, 255))
         bg.alpha_composite(img)
         img = bg
     return np.asarray(img.convert("L"), dtype=np.float32)
+    # [/adım 1]
 
 
 def preprocess(img, invert=None):
@@ -67,6 +69,7 @@ def preprocess(img, invert=None):
     gray = to_gray(img)
     h0, w0 = gray.shape
 
+    # [adım 2] Ters çevir + kırp: siyah zemin, beyaz rakam; boşluk atılır
     if invert is None:
         border = np.concatenate([gray[0], gray[-1], gray[:, 0], gray[:, -1]])
         invert = bool(border.mean() > 127)
@@ -81,9 +84,12 @@ def preprocess(img, invert=None):
     crop = ink[y0:y1 + 1, x0:x1 + 1]
 
     ch, cw = crop.shape
-    # Kalın kalemle çizilen çok küçük rakam ya da tek tık, ölçeklenince şişip yanlış ama emin bir tahmin verir
+    # Çok küçük çizim ya da tek tık, büyütülünce yanlış ama emin bir tahmin verir
     if max(ch, cw) < MIN_DIGIT_RATIO * max(h0, w0):
         raise ValueError("Rakam çok küçük, daha büyük çizin")
+    # [/adım 2]
+
+    # [adım 3] 28×28'e getir: 20 piksel, kütle merkezi ortada, normalize
     scale = 20.0 / max(ch, cw)
     nh, nw = max(1, round(ch * scale)), max(1, round(cw * scale))
     small = np.asarray(
@@ -101,6 +107,7 @@ def preprocess(img, invert=None):
 
     x = torch.from_numpy(img28 / 255.0).reshape(1, 1, 28, 28)
     x = (x - MEAN) / STD
+    # [/adım 3]
     return {
         "size": (w0, h0),
         "inverted": inverted,
@@ -115,6 +122,7 @@ def preprocess(img, invert=None):
 
 def forward_steps(model, x):
     """CNN.forward ile aynı hesabı katman katman yapar; her ara çıktıyı döndürür."""
+    # [adım 4] CNN + softmax: katmanlardan sırayla geçiş (train.py'deki CNN)
     with torch.no_grad():
         a = F.relu(model.conv1(x))
         p1 = F.max_pool2d(a, 2)
@@ -122,6 +130,7 @@ def forward_steps(model, x):
         flat = model.dropout(p2.flatten(1))
         h = F.relu(model.fc1(flat))
         logits = model.fc2(h)
+    # [/adım 4]
     steps = [
         ("conv1 3×3 + ReLU + max pool", p1),
         ("conv2 3×3 + ReLU + max pool", p2),
@@ -159,9 +168,11 @@ def run(model, img, out=print, invert=None):
     t0 = time.perf_counter()
     pre = preprocess(img, invert=invert)
     steps, logits, conv1_out = forward_steps(model, pre["tensor"])
-    probs = F.softmax(logits, dim=1)[0]
+    # [adım 4]
+    probs = F.softmax(logits, dim=1)[0]  # 10 skor → toplamı 1 olan 10 olasılık
+    digit = int(probs.argmax())          # en yüksek olasılık = tahmin
+    # [/adım 4]
     ms = (time.perf_counter() - t0) * 1000
-    digit = int(probs.argmax())
 
     w0, h0 = pre["size"]
     x0, y0, x1, y1 = pre["bbox"]
