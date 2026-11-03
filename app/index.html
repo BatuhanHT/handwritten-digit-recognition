@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <title>El Yazısı Rakam Tanıma — Canlı Demo</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>El Yazısı Rakam Tanıma</h1>
+      <p class="sub">Canlı demo · MNIST ile eğitilmiş evrişimli sinir ağı (CNN)</p>
+    </div>
+    <div class="status" id="status" data-state="wait"><span class="dot"></span><span id="status-text">Model yükleniyor…</span></div>
+  </header>
+
+  <main class="grid">
+    <section class="left">
+      <div class="board">
+        <canvas id="pad" width="280" height="280" aria-label="Rakam çizim alanı"></canvas>
+        <div class="hint" id="hint">Bir rakam çizin<br><span>0 – 9</span></div>
+      </div>
+      <p class="caption">280×280 tuval · fare ya da touchpad ile çizin</p>
+      <div class="controls">
+        <button id="predict" class="primary" disabled>Tahmin Et <kbd>Enter</kbd></button>
+        <button id="clear" class="ghost">Temizle <kbd>Esc</kbd></button>
+      </div>
+    </section>
+
+    <section class="right">
+      <div class="terminal">
+        <div class="term-bar">
+          <span class="lights"><i></i><i></i><i></i></span>
+          <span class="term-title">Arka planda · src/predict.py (PyTorch)</span>
+        </div>
+        <div class="term-body" id="term" role="log" aria-live="polite"></div>
+      </div>
+
+      <div class="bottom">
+        <div class="stages">
+          <figure class="stage" id="st1"><div class="frame light"><img alt=""></div><figcaption><b>1</b>Çizim</figcaption></figure>
+          <figure class="stage" id="st2"><div class="frame"><img class="px" alt=""></div><figcaption><b>2</b>Ters çevir + kırp</figcaption></figure>
+          <figure class="stage" id="st3"><div class="frame"><img class="px" alt=""></div><figcaption><b>3</b>28×28'e getir</figcaption></figure>
+          <figure class="stage" id="st4"><div class="frame maps"></div><figcaption><b>4</b>CNN: conv1 haritaları</figcaption></figure>
+        </div>
+        <div class="result" id="result" data-state="idle">
+          <div class="result-digit" id="digit">?</div>
+          <div class="result-meta">
+            <div class="result-label">Tahmin</div>
+            <div class="result-conf" id="conf">Çizim bekleniyor</div>
+            <ol class="top3" id="top3"></ol>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

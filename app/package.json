@@ -1,0 +1,13 @@
+{
+  "name": "rakam-tanima-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "El yazısı rakam tanıma canlı demo arayüzü (Electron + PyTorch)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "44.9.3"
+  }
+}
