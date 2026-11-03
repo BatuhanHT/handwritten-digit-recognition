@@ -205,7 +205,12 @@ def emit(tag, payload):
 
 
 def serve(model_path):
-    rel = model_path.relative_to(ROOT) if model_path.is_relative_to(ROOT) else model_path
+    # Electron çıktıyı UTF-8 okur; Windows'ta varsayılan kod sayfası Türkçe karakterleri ve █ ◀ işaretlerini bozar
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+    # Repo dışındaki (ör. paketlenmiş uygulamanın içindeki) uzun yolu terminal satırına sığdırmak için yalnızca adı
+    rel = model_path.relative_to(ROOT) if model_path.is_relative_to(ROOT) else model_path.name
     print(f"Model yükleniyor: {rel}", flush=True)
     if not model_path.exists():
         print(f"Hata: model dosyası yok ({rel}). Önce: python src/train.py --epochs 5", flush=True)

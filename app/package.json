@@ -5,9 +5,72 @@
   "description": "El yazısı rakam tanıma canlı demo arayüzü (Electron + PyTorch)",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "postinstall": "node node_modules/electron/install.js",
+    "dist": "electron-builder --publish never"
   },
   "devDependencies": {
-    "electron": "44.9.3"
+    "electron": "44.9.3",
+    "electron-builder": "26.18.0"
+  },
+  "allowScripts": {
+    "electron-winstaller": false
+  },
+  "author": "EBLG463 ÖZET Grubu",
+  "build": {
+    "appId": "com.batuhanht.rakamtanima",
+    "productName": "Rakam Tanima Demo",
+    "artifactName": "RakamTanima-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../build/backend/predict-backend",
+        "to": "backend/predict-backend"
+      },
+      {
+        "from": "../models/mnist_cnn.pt",
+        "to": "models/mnist_cnn.pt"
+      }
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.education",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "minimumSystemVersion": "14.0"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Rakam Tanıma Demo"
+    }
   }
 }

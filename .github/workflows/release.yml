@@ -1,0 +1,95 @@
+# Canlı demo uygulamasını paketler: macOS (Apple Silicon) için .dmg, Windows (x64) için .exe kurulum dosyası.
+# v* etiketi push edilince iki paketi bir GitHub Release'e yükler. Elle çalıştırınca (workflow_dispatch)
+# yalnızca paketleri derler ve Actions sayfasına yükler; release oluşturmaz.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Derleme adımları (pip, npm, PyInstaller) yalnızca okuma yetkisiyle çalışır; yazma yetkisi sadece release işinde
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: --mac dmg --arm64
+          - os: windows-latest
+            target: --win nsis --x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Etiket ile app/package.json sürümü aynı mı
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          want="${GITHUB_REF_NAME#v}"
+          have=$(node -p "require('./app/package.json').version")
+          [ "$want" = "$have" ] || { echo "Etiket $GITHUB_REF_NAME ama app/package.json sürümü $have" >&2; exit 1; }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python bağımlılıkları
+        run: python -m pip install -r requirements-build.txt
+
+      - name: Testler
+        run: python -m unittest discover -s tests -v
+
+      - name: Python arka ucunu paketle (PyInstaller) ve duman testi
+        run: PYTHON=python scripts/build_backend.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Electron paketini derle
+        working-directory: app
+        run: |
+          npm ci
+          npx electron-builder ${{ matrix.target }} --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paket-${{ matrix.os }}
+          path: |
+            app/dist/*.dmg
+            app/dist/*.exe
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: paketler
+          merge-multiple: true
+
+      - name: GitHub Release oluştur
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" paketler/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Rakam Tanıma Demo $GITHUB_REF_NAME" \
+            --notes-file .github/release-notes.md

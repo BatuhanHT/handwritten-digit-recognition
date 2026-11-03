@@ -5,3 +5,5 @@ __pycache__/
 models/*.pt
 .DS_Store
 node_modules/
+/build/
+app/dist/

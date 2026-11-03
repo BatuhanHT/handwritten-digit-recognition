@@ -167,7 +167,8 @@ class ServeProtocolTest(unittest.TestCase):
             ]
             proc = subprocess.run(
                 [sys.executable, "-u", str(ROOT / "src" / "predict.py"), "--serve", "--model", str(model_file)],
-                input="\n".join(requests) + "\n", capture_output=True, text=True, timeout=120, cwd=ROOT,
+                input="\n".join(requests) + "\n", capture_output=True, text=True, encoding="utf-8",
+                timeout=120, cwd=ROOT,
             )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         tags = [line.split(" ", 1) for line in proc.stdout.splitlines() if line.startswith("@@")]
@@ -178,7 +179,7 @@ class ServeProtocolTest(unittest.TestCase):
     def test_missing_model_reports_fatal(self):
         proc = subprocess.run(
             [sys.executable, "-u", str(ROOT / "src" / "predict.py"), "--serve", "--model", "/yok/model.pt"],
-            input="", capture_output=True, text=True, timeout=60, cwd=ROOT,
+            input="", capture_output=True, text=True, encoding="utf-8", timeout=60, cwd=ROOT,
         )
         self.assertEqual(proc.returncode, 1)
         self.assertIn("@@FATAL", proc.stdout)

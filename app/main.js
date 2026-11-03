@@ -10,10 +10,22 @@ const ROOT = path.resolve(__dirname, '..');
 let win = null;
 let py = null;
 
-function pythonPath() {
-  if (process.env.PYTHON) return process.env.PYTHON;
-  const venv = path.join(ROOT, '.venv', 'bin', 'python');
-  return fs.existsSync(venv) ? venv : 'python3';
+// Geliştirmede repodaki .venv ile src/predict.py çalışır. Paketlenmiş uygulamada (dmg/exe) aynı betik
+// PyInstaller ile tek klasörlük bir programa dönüştürülüp Resources/backend altına konur.
+function backendCommand() {
+  if (app.isPackaged) {
+    const dir = path.join(process.resourcesPath, 'backend', 'predict-backend');
+    const exe = path.join(dir, process.platform === 'win32' ? 'predict-backend.exe' : 'predict-backend');
+    const model = path.join(process.resourcesPath, 'models', 'mnist_cnn.pt');
+    return { exe, args: ['--serve', '--model', model], cwd: dir, shown: 'predict-backend --serve   (src/predict.py, paketlenmiş)' };
+  }
+  let exe = process.env.PYTHON;
+  if (!exe) {
+    const venv = path.join(ROOT, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+    exe = fs.existsSync(venv) ? venv : 'python3';
+  }
+  const shown = path.isAbsolute(exe) ? path.relative(ROOT, exe) : exe;
+  return { exe, args: ['-u', 'src/predict.py', '--serve'], cwd: ROOT, shown: `${shown} -u src/predict.py --serve` };
 }
 
 function send(channel, payload) {
@@ -28,13 +40,13 @@ function startPython() {
     py = null;
     old.kill();
   }
-  const exe = pythonPath();
-  const shown = path.isAbsolute(exe) ? path.relative(ROOT, exe) : exe;
-  send('py-line', { stream: 'cmd', text: `$ ${shown} -u src/predict.py --serve` });
+  const { exe, args, cwd, shown } = backendCommand();
+  send('py-line', { stream: 'cmd', text: `$ ${shown}` });
 
-  const child = spawn(exe, ['-u', 'src/predict.py', '--serve'], {
-    cwd: ROOT,
-    env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+  const child = spawn(exe, args, {
+    cwd,
+    env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUNBUFFERED: '1' },
+    windowsHide: true,
   });
   py = child;
   const own = (fn) => (...args) => { if (py === child) fn(...args); }; // eski süreçten gelenleri yok say

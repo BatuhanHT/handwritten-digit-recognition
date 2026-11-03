@@ -74,6 +74,18 @@ npm start
 
 Kısayollar: **Enter** tahmin eder, **Esc** tuvali temizler. Uygulama `.venv/bin/python`'u kullanır; yoksa `python3` denenir. Başka bir yorumlayıcı için `PYTHON=/yol/python npm start` yazın.
 
+### Hazır paketler (dmg / exe)
+
+Python kurmadan denemek için [Releases](https://github.com/BatuhanHT/handwritten-digit-recognition/releases) sayfasından macOS 14+ (Apple Silicon) `.dmg` ya da Windows (x64) `.exe` dosyasını indirin. Python, PyTorch ve model paketin içinde gelir. Paketler imzasızdır; ilk açılışta çıkan uyarının nasıl geçileceği release notlarında anlatılıyor.
+
+Paketler `v*` etiketi atılınca GitHub Actions ile derlenir (`.github/workflows/release.yml`). Yerelde derlemek için (yalnızca kendi işletim sisteminiz için):
+
+```bash
+pip install -r requirements-build.txt   # PyInstaller
+scripts/build_backend.sh                # src/predict.py → build/backend/predict-backend/
+cd app && npm run dist                  # → app/dist/*.dmg ya da *.exe
+```
+
 ## Testler
 
 ```bash
@@ -107,6 +119,8 @@ Toplam 421.642 eğitilebilir parametre. Optimizasyon: Adam (öğrenme oranı 0,0
 │   └── predict.py     # Tek görüntüden tahmin; Electron demosunun arka ucu
 ├── app/               # Electron canlı demo arayüzü
 ├── tests/             # predict.py testleri
+├── scripts/           # build_backend.sh: Python arka ucunu paketler (PyInstaller)
+├── .github/workflows/ # release.yml: dmg ve exe derleyip GitHub Release'e yükler
 ├── data/              # MNIST (ilk çalıştırmada otomatik iner, repoda yok)
 ├── models/            # Eğitilen model ve çıktılar (tahminler.png örnek çıktı)
 ├── setup.sh           # Sanal ortam ve bağımlılık kurulumu
